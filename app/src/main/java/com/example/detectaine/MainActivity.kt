@@ -35,9 +35,14 @@ import com.google.mlkit.vision.objects.custom.CustomObjectDetectorOptions
 import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -55,6 +60,7 @@ class MainActivity : AppCompatActivity() {
     lateinit var textos: Text
     lateinit var imagenRecortada: Bitmap
 
+    var cambiandoActividad =  false
     //var hayTextos = false
     //var hayRostro = false
 
@@ -145,6 +151,7 @@ class MainActivity : AppCompatActivity() {
                                     box.width(),
                                     box.height()
                                 )
+                                val inputImage = InputImage.fromBitmap(crooppedBitmap, 0)
 
                                 recognizer.process(InputImage.fromBitmap(crooppedBitmap, 0))
                                     .addOnSuccessListener { labels ->
@@ -167,9 +174,18 @@ class MainActivity : AppCompatActivity() {
                                                 .addOnSuccessListener { faces ->
                                                     Log.v(TAG, "faces: $faces")
 
+                                                    var faceBitmap: Bitmap? = null
                                                     if (faces.size > 0) {
                                                         hayRostro = true
                                                         rostro = faces[0]
+
+                                                        faceBitmap = Bitmap.createBitmap(
+                                                            crooppedBitmap,
+                                                            rostro.boundingBox.left,
+                                                            rostro.boundingBox.top,
+                                                            rostro.boundingBox.width(),
+                                                            rostro.boundingBox.height()
+                                                        )
                                                     }
                                                     for (face in faces) {
                                                         val faceDrawable = FaceDrawable(face, box.left, box.top)
@@ -180,16 +196,19 @@ class MainActivity : AppCompatActivity() {
                                                     if (hayTextos && hayRostro) {
                                                         Log.v("credencial","si hay credencial")
 
+                                                        // Guardar el Bitmap en la memoria interna
+                                                        val rutaDeArchivo = guardarBitmapEnArchivoInterno(crooppedBitmap, "nombre_archivo.png")
+
                                                         // Crear un Intent para cambiar a ActivityB
                                                         val intent = Intent(this, DatosCredencialActivity::class.java)
 
-                                                        // Opcional: Puedes enviar datos adicionales a ActivityB utilizando putExtra
-                                                        intent.putExtra("clave", "valor")
-                                                        intent.putExtra("rostro", rostro)
-                                                        intent.putExtra("textos", textos)
+                                                        // Pasar la ruta del archivo como extra
+                                                        intent.putExtra("rutaArchivo", rutaDeArchivo)
 
-                                                        // Iniciar ActivityB
-                                                        startActivity(intent)
+                                                        if (!cambiandoActividad) {
+                                                            cambiandoActividad = true
+                                                            startActivity(intent)
+                                                        }
                                                     }
                                                 }
                                         }
@@ -206,6 +225,21 @@ class MainActivity : AppCompatActivity() {
         previewView.controller = cameraController
     }
 
+    private fun guardarBitmapEnArchivoInterno(bitmap: Bitmap, nombreArchivo: String): String {
+        val directorioInterno = filesDir
+        val archivo = File(directorioInterno, nombreArchivo)
+
+        try {
+            val stream = FileOutputStream(archivo)
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+            stream.close()
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+
+        return archivo.absolutePath
+    }
+
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
         ContextCompat.checkSelfPermission(
             baseContext, it) == PackageManager.PERMISSION_GRANTED
@@ -214,6 +248,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         cameraExecutor.shutdown()
+        cambiandoActividad = false
     }
 
     companion object {
@@ -245,12 +280,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-}
 
-private fun Intent.putExtra(s: String, textos: Text) {
-
-}
-
-private fun Intent.putExtra(s: String, rostro: Face) {
-
+    override fun onResume() {
+        super.onResume()
+        cambiandoActividad = false
+    }
 }

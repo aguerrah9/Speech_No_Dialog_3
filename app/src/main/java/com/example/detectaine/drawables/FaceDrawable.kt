@@ -58,7 +58,7 @@ class FaceDrawable(face: Face, prewidth: Int = 0, preheigth: Int = 0) : Drawable
 
     override fun draw(canvas: Canvas) {
         canvas.drawRect(realBoundingBox, boundingRectPaint)
-        canvas.drawRect(
+        /*canvas.drawRect(
             Rect(
                 face.boundingBox.left + prewidth,
                 face.boundingBox.bottom + preheigth + contentPadding/2,
@@ -71,7 +71,7 @@ class FaceDrawable(face: Face, prewidth: Int = 0, preheigth: Int = 0) : Drawable
             (face.boundingBox.left + prewidth + contentPadding).toFloat(),
             (face.boundingBox.bottom + preheigth + contentPadding*2).toFloat(),
             contentTextPaint
-        )
+        )*/
     }
 
     override fun setAlpha(alpha: Int) {

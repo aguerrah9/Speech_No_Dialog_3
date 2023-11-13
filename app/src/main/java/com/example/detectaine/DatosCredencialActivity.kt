@@ -5,11 +5,13 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.example.camerax_mlkit.FaceDrawable
+import com.example.camerax_mlkit.TextDrawable
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetector
@@ -44,26 +46,26 @@ class DatosCredencialActivity : AppCompatActivity() {
         // Cargar el Bitmap desde la memoria interna
         bitmap = rutaArchivo?.let { cargarBitmapDesdeArchivo(it) }!!
 
-        // Haz lo que necesites con el Bitmap
-        if (bitmap != null) {
-            rostroView.setImageBitmap(bitmap)
-            //reconoce()
-        } else {
-            datosTexto.setText("No se encontro la imagen")
-        }
-
         // Real-time contour detection
         val realTimeOpts = FaceDetectorOptions.Builder()
             .setContourMode(FaceDetectorOptions.CONTOUR_MODE_ALL)
             .build()
         detectorRostro = FaceDetection.getClient(realTimeOpts)
 
+        // Haz lo que necesites con el Bitmap
+        if (bitmap != null) {
+            rostroView.setImageBitmap(bitmap)
+            reconoce()
+        } else {
+            datosTexto.setText("No se encontro la imagen")
+        }
 
     }
 
     fun reconoce() {
         datosTexto.setText("Cargando...")
         botonReconocer.isEnabled = false
+        rostroView.overlay.clear()
 
         val imagen = InputImage.fromBitmap(bitmap, 0)
         detectorRostro.process(imagen)
@@ -72,10 +74,10 @@ class DatosCredencialActivity : AppCompatActivity() {
 
                 var faceBitmap: Bitmap? = null
                 if (faces.size > 0) {
-                    rostro = faces[0]
+                    val rostro = faces[0]
 
                     faceBitmap = Bitmap.createBitmap(
-                        crooppedBitmap,
+                        bitmap,
                         rostro.boundingBox.left,
                         rostro.boundingBox.top,
                         rostro.boundingBox.width(),
@@ -83,11 +85,31 @@ class DatosCredencialActivity : AppCompatActivity() {
                     )
                 }
                 for (face in faces) {
-                    val faceDrawable = FaceDrawable(face, box.left, box.top)
+                    val faceDrawable = FaceDrawable(face)
 
                     //previewView.overlay.clear()
-                    previewView.overlay.add(faceDrawable)
+                    rostroView.overlay.add(faceDrawable)
                 }
+            }
+            .addOnCompleteListener {
+                botonReconocer.isEnabled = true
+            }
+
+        detectorTexto.process(InputImage.fromBitmap(bitmap, 0))
+            .addOnSuccessListener { labels ->
+                Log.v("Reconocedor textos", "labels: " + labels.text)
+
+                var textosBox = ""
+                for ( textBlock in labels?.textBlocks!! ) {
+                    val textDrawable = TextDrawable(textBlock)
+                    rostroView.overlay.add(textDrawable)
+                    textosBox += textBlock.boundingBox?.left.toString() +" "+
+                            textBlock.boundingBox?.top.toString()  +" "+ textBlock.text +"\n"
+                }
+                datosTexto.setText(textosBox)
+            }
+            .addOnCompleteListener {
+                botonReconocer.isEnabled = true
             }
     }
 

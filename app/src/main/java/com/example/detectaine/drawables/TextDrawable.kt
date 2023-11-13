@@ -57,7 +57,7 @@ class TextDrawable(textBlock: TextBlock, prewidth: Int = 0, preheigth: Int = 0) 
 
     override fun draw(canvas: Canvas) {
         canvas.drawRect(realBoundingBox, boundingRectPaint)
-        canvas.drawRect(
+        /*canvas.drawRect(
             Rect(
                 textBlock.boundingBox!!.left +prewidth,
                 textBlock.boundingBox!!.bottom+preheigth + contentPadding/2,
@@ -70,7 +70,7 @@ class TextDrawable(textBlock: TextBlock, prewidth: Int = 0, preheigth: Int = 0) 
             (textBlock.boundingBox!!.left+prewidth + contentPadding).toFloat(),
             (textBlock.boundingBox!!.bottom+preheigth + contentPadding*2).toFloat(),
             contentTextPaint
-        )
+        )*/
     }
 
     override fun setAlpha(alpha: Int) {

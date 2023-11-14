@@ -49,7 +49,7 @@ class ObjectDetectedDrawable(objectViewModel: DetectedObject) : Drawable() {
 
     override fun draw(canvas: Canvas) {
         canvas.drawRect(objectViewModel.boundingBox, boundingRectPaint)
-        canvas.drawRect(
+        /*canvas.drawRect(
             Rect(
                 objectViewModel.boundingBox.left,
                 objectViewModel.boundingBox.bottom + contentPadding/2,
@@ -62,7 +62,7 @@ class ObjectDetectedDrawable(objectViewModel: DetectedObject) : Drawable() {
             (objectViewModel.boundingBox.left + contentPadding).toFloat(),
             (objectViewModel.boundingBox.bottom + contentPadding*2).toFloat(),
             contentTextPaint
-        )
+        )*/
     }
 
     override fun setAlpha(alpha: Int) {

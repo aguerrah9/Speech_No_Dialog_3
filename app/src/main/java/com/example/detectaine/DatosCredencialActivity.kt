@@ -129,8 +129,36 @@ class DatosCredencialActivity : AppCompatActivity() {
             }
             .addOnCompleteListener {
                 botonReconocer.isEnabled = true
-                //datosTexto.setText(textosyPosiciones.toString())
+                calcularOrigen()
             }
+    }
+
+    private fun calcularOrigen() {
+
+        val labelMexico = textosyPosiciones.filter { it.texto == "MÉXICO" }
+        val labelINE = textosyPosiciones.filter { it.texto == "INSTITUTO FEDERAL ELECTORAL" || it.texto == "INSTITUTO NACIONAL ELECTORAL" }
+        val labelCredencial = textosyPosiciones.filter { it.texto == "CREDENCIAL PARA VOTAR" }
+        val labelNombre = textosyPosiciones.filter { it.texto == "NOMBRE" }
+
+        if (labelMexico.size > 0 && labelNombre.size > 0) {
+            val difLeft = labelMexico[0].left - labelNombre[0].left
+            val difTop = labelMexico[0].top - labelNombre[0].top
+
+            // INE posicion ideal w 35 h 8
+            // Mexico posicion ideal w 20 h 10
+
+            //val origenX =
+
+            datosTexto.setText(
+                "labelMexico: "+ labelMexico[0].toString()+ "\n\n" +
+                "labelINE: " + labelINE[0].toString()+ "\n\n"+
+                        "labelCredencial: " + labelCredencial[0].toString() + "\n\n"+
+                        "labelNombre: " + labelNombre[0].toString()+ "\n\n" +
+                        "Diferencia: "+ difLeft +" "+ difTop
+            )
+        } else {
+            datosTexto.setText("No se pudo calcular el origen")
+        }
     }
 
     private fun cargarBitmapDesdeArchivo(rutaArchivo: String): Bitmap? {

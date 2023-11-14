@@ -8,6 +8,7 @@ import android.graphics.*
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.widget.Button
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
@@ -24,7 +25,6 @@ import com.example.detectaine.databinding.ActivityMainBinding
 import com.example.detectaine.drawables.ObjectDetectedDrawable
 import com.google.mlkit.common.model.LocalModel
 import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetector
 import com.google.mlkit.vision.face.FaceDetectorOptions
@@ -35,7 +35,6 @@ import com.google.mlkit.vision.objects.custom.CustomObjectDetectorOptions
 import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -47,6 +46,7 @@ import java.util.concurrent.Executors
 class MainActivity : AppCompatActivity() {
 
     private lateinit var viewBinding: ActivityMainBinding
+    private lateinit var botonFoto: Button
 
     private lateinit var cameraExecutor: ExecutorService
 
@@ -56,11 +56,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var faceDetector : FaceDetector
 
     lateinit var objectoDetectado: DetectedObject
-    lateinit var rostro: Face
+    //lateinit var rostro: Face
     lateinit var textos: Text
-    lateinit var imagenRecortada: Bitmap
+    //lateinit var imagenRecortada: Bitmap
 
     var cambiandoActividad =  false
+    var tomarFoto = false
     //var hayTextos = false
     //var hayRostro = false
 
@@ -70,6 +71,9 @@ class MainActivity : AppCompatActivity() {
         setContentView(viewBinding.root)
         viewBinding.viewFinder.implementationMode = PreviewView.ImplementationMode.COMPATIBLE
         viewBinding.viewFinder.scaleType = PreviewView.ScaleType.FIT_CENTER
+
+        botonFoto = findViewById(R.id.buttonTomarFoto)
+        botonFoto.setOnClickListener { tomarFoto() }
 
         val localModel =
             LocalModel.Builder().setAssetFilePath("custom_models/object_labeler.tflite").build()
@@ -101,6 +105,10 @@ class MainActivity : AppCompatActivity() {
 
     }
 
+    private fun tomarFoto() {
+        tomarFoto = true
+        botonFoto.isEnabled = false
+    }
     @SuppressLint("UnsafeOptInUsageError")
     private fun startCamera() {
 
@@ -163,10 +171,13 @@ class MainActivity : AppCompatActivity() {
                                             textos = labels
                                         }
                                         for ( textBlock in labels?.textBlocks!! ) {
-                                            val textDrawable = TextDrawable(textBlock, box.left, box.top)
+                                            for (linea in textBlock.lines) {
+                                                val textDrawable =
+                                                    TextDrawable(linea, box.left, box.top)
 
-                                            //previewView.overlay.clear()
-                                            previewView.overlay.add(textDrawable)
+                                                //previewView.overlay.clear()
+                                                previewView.overlay.add(textDrawable)
+                                            }
                                         }
                                         if (hayTextos) {
 
@@ -174,18 +185,18 @@ class MainActivity : AppCompatActivity() {
                                                 .addOnSuccessListener { faces ->
                                                     Log.v(TAG, "faces: $faces")
 
-                                                    var faceBitmap: Bitmap? = null
+                                                    ///var faceBitmap: Bitmap? = null
                                                     if (faces.size > 0) {
                                                         hayRostro = true
-                                                        rostro = faces[0]
+                                                        //rostro = faces[0]
 
-                                                        faceBitmap = Bitmap.createBitmap(
+                                                        /*faceBitmap = Bitmap.createBitmap(
                                                             crooppedBitmap,
                                                             rostro.boundingBox.left,
                                                             rostro.boundingBox.top,
                                                             rostro.boundingBox.width(),
                                                             rostro.boundingBox.height()
-                                                        )
+                                                        )*/
                                                     }
                                                     for (face in faces) {
                                                         val faceDrawable = FaceDrawable(face, box.left, box.top)
@@ -205,7 +216,7 @@ class MainActivity : AppCompatActivity() {
                                                         // Pasar la ruta del archivo como extra
                                                         intent.putExtra("rutaArchivo", rutaDeArchivo)
 
-                                                        if (!cambiandoActividad) {
+                                                        if (!cambiandoActividad && tomarFoto) {
                                                             cambiandoActividad = true
                                                             startActivity(intent)
                                                         }
@@ -284,5 +295,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         cambiandoActividad = false
+        tomarFoto = false
+        botonFoto.isEnabled = true
     }
 }

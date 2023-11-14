@@ -18,12 +18,12 @@ package com.example.camerax_mlkit
 
 import android.graphics.*
 import android.graphics.drawable.Drawable
-import com.google.mlkit.vision.text.Text.TextBlock
+import com.google.mlkit.vision.text.Text
 
 /**
  * A Drawable that handles displaying a QR Code's data and a bounding box around the QR code.
  */
-class TextDrawable(textBlock: TextBlock, prewidth: Int = 0, preheigth: Int = 0) : Drawable() {
+class TextDrawable(textBlock: Text.Line, prewidth: Int = 0, preheigth: Int = 0) : Drawable() {
     private val boundingRectPaint = Paint().apply {
         style = Paint.Style.STROKE
         color = Color.YELLOW

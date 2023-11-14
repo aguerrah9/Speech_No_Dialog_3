@@ -1,11 +1,10 @@
 package com.example.detectaine
 
-import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
+import android.text.method.ScrollingMovementMethod
 import android.util.Log
-import android.view.View
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
@@ -31,12 +30,16 @@ class DatosCredencialActivity : AppCompatActivity() {
 
     private lateinit var bitmap: Bitmap
 
+    private var textosyPosiciones = mutableListOf<TextoPosicion>()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_datos_credencial)
 
         rostroView = findViewById(R.id.imageViewRostro)
         datosTexto = findViewById(R.id.textViewDatos)
+        //datosTexto.movementMethod = ScrollingMovementMethod()
+        datosTexto.setMovementMethod(ScrollingMovementMethod())
         botonReconocer = findViewById(R.id.buttonReconoce)
         botonReconocer.setOnClickListener { reconoce() }
 
@@ -76,13 +79,20 @@ class DatosCredencialActivity : AppCompatActivity() {
                 if (faces.size > 0) {
                     val rostro = faces[0]
 
-                    faceBitmap = Bitmap.createBitmap(
-                        bitmap,
-                        rostro.boundingBox.left,
-                        rostro.boundingBox.top,
-                        rostro.boundingBox.width(),
-                        rostro.boundingBox.height()
-                    )
+                    if (rostro.boundingBox.left >= 0 && rostro.boundingBox.top >= 0 &&
+                                rostro.boundingBox.width() <= bitmap.width &&
+                                rostro.boundingBox.height() <= bitmap.height
+                    ) {
+                        faceBitmap = Bitmap.createBitmap(
+                            bitmap,
+                            rostro.boundingBox.left,
+                            rostro.boundingBox.top,
+                            rostro.boundingBox.width(),
+                            rostro.boundingBox.height()
+                        )
+                    } else {
+                        Log.v("Recortar Rostro: ","no fue posible obtener la imagen completa del rostro" )
+                    }
                 }
                 for (face in faces) {
                     val faceDrawable = FaceDrawable(face)
@@ -101,15 +111,25 @@ class DatosCredencialActivity : AppCompatActivity() {
 
                 var textosBox = ""
                 for ( textBlock in labels?.textBlocks!! ) {
-                    val textDrawable = TextDrawable(textBlock)
-                    rostroView.overlay.add(textDrawable)
-                    textosBox += textBlock.boundingBox?.left.toString() +" "+
-                            textBlock.boundingBox?.top.toString()  +" "+ textBlock.text +"\n"
+                    for (linea in textBlock.lines) {
+                        val textDrawable = TextDrawable(linea)
+                        rostroView.overlay.add(textDrawable)
+                        textosBox += (linea.boundingBox!!.left.toFloat() * 100 / bitmap.width).toString() + " " +
+                                (linea.boundingBox!!.top.toFloat() * 100 / bitmap.height).toString() + " " + linea.text + "\n"
+                        textosyPosiciones.add(
+                            TextoPosicion(
+                                linea.boundingBox!!.left.toDouble() / bitmap.width,
+                                linea.boundingBox!!.top.toDouble() / bitmap.height,
+                                linea.text
+                            )
+                        )
+                    }
                 }
                 datosTexto.setText(textosBox)
             }
             .addOnCompleteListener {
                 botonReconocer.isEnabled = true
+                //datosTexto.setText(textosyPosiciones.toString())
             }
     }
 
@@ -117,3 +137,5 @@ class DatosCredencialActivity : AppCompatActivity() {
         return BitmapFactory.decodeFile(rutaArchivo)
     }
 }
+
+data class TextoPosicion(val left: Double, val top: Double, val texto: String)

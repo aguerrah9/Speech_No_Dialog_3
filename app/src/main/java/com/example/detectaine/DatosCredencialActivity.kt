@@ -17,6 +17,8 @@ import com.google.mlkit.vision.face.FaceDetector
 import com.google.mlkit.vision.face.FaceDetectorOptions
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import kotlin.math.abs
+import kotlin.math.atan
 
 
 class DatosCredencialActivity : AppCompatActivity() {
@@ -29,6 +31,9 @@ class DatosCredencialActivity : AppCompatActivity() {
     private lateinit var detectorRostro : FaceDetector
 
     private lateinit var bitmap: Bitmap
+
+    private val anguloMiIdealRad = atan( (-2).toFloat() /15 )
+    private val anguloMiIdeal = (anguloMiIdealRad * 180) / Math.PI
 
     private var textosyPosiciones = mutableListOf<TextoPosicion>()
 
@@ -139,25 +144,54 @@ class DatosCredencialActivity : AppCompatActivity() {
         val labelINE = textosyPosiciones.filter { it.texto == "INSTITUTO FEDERAL ELECTORAL" || it.texto == "INSTITUTO NACIONAL ELECTORAL" }
         val labelCredencial = textosyPosiciones.filter { it.texto == "CREDENCIAL PARA VOTAR" }
         val labelNombre = textosyPosiciones.filter { it.texto == "NOMBRE" }
+        val labelDomicilio = textosyPosiciones.filter { it.texto == "DOMICILIO" }
 
-        if (labelMexico.size > 0 && labelNombre.size > 0) {
-            val difLeft = labelMexico[0].left - labelNombre[0].left
-            val difTop = labelMexico[0].top - labelNombre[0].top
+        if (labelNombre.size > 0 && labelDomicilio.size > 0 &&
+                    labelINE.size > 0 && labelMexico.size > 0
+        ) {
+
+            val diffmix = labelINE[0].left - labelMexico[0].left
+            val diffmiy = labelINE[0].top - labelMexico[0].top
+            val mi = atan( (diffmiy/diffmix) )
+            val angmi = mi * 180 / Math.PI
+            val anguloRotacion = angmi - anguloMiIdeal
+            var rotacion = ""
+
+            if (anguloRotacion < 0) rotacion = "izquierda"
+            else if (anguloRotacion > 0) rotacion = "derecha"
+            else rotacion = "sin rotacion"
+
+            val difLeft = labelDomicilio[0].left - labelNombre[0].left
+            val difTop = labelDomicilio[0].top - labelNombre[0].top
+
+            val rads = atan(difLeft/difTop)
+            val theta = (rads * 180) / Math.PI
+
+            //if (theta < 0) theta = 180 - theta
+            //val rotacion2 = 90 - theta
 
             // INE posicion ideal w 35 h 8
             // Mexico posicion ideal w 20 h 10
 
-            //val origenX =
+            // (10.08547 - 6.324786) = 3.760684
+            // (37.446808 - 23.19149) = 14.255318
+            // 3.760684 / 14.255318 = 0.2638
+            // atan( 0.2638 ) =
 
-            datosTexto.setText(
-                "labelMexico: "+ labelMexico[0].toString()+ "\n\n" +
-                "labelINE: " + labelINE[0].toString()+ "\n\n"+
-                        "labelCredencial: " + labelCredencial[0].toString() + "\n\n"+
-                        "labelNombre: " + labelNombre[0].toString()+ "\n\n" +
-                        "Diferencia: "+ difLeft +" "+ difTop
+            val textoAnterior = datosTexto.text.toString()
+            datosTexto.setText( textoAnterior + "\n\n" +
+                    "pendiente mi Ideal: "+ (-2.toFloat() / 15).toString() + "\n\n"+
+                    "pendiente mi: "+ mi + "\n\n" +
+                    "anguloMiIdeal: " + anguloMiIdeal+ "\n\n" +
+                    "angulo obtenido: " + angmi+ "\n\n" +
+                    "anguloRotacion: "+anguloRotacion + "\n\n" +
+                    "angulo: "+ theta + "\n\n" +
+                    //"rotacion2: "+ rotacion2 + "\n\n" +
+                    "rotacion: "+ rotacion
             )
         } else {
-            datosTexto.setText("No se pudo calcular el origen")
+            val textoAnterior = datosTexto.text.toString()
+            datosTexto.setText(textoAnterior + "\n\nNo se pudo calcular el origen")
         }
     }
 

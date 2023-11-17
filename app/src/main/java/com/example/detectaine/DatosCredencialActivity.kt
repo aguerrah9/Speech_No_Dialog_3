@@ -123,8 +123,8 @@ class DatosCredencialActivity : AppCompatActivity() {
                                 (linea.boundingBox!!.top.toFloat() * 100 / bitmap.height).toString() + " " + linea.text + "\n"
                         textosyPosiciones.add(
                             TextoPosicion(
-                                linea.boundingBox!!.left.toDouble() / bitmap.width,
-                                linea.boundingBox!!.top.toDouble() / bitmap.height,
+                                linea.boundingBox!!.left.toDouble(),
+                                linea.boundingBox!!.top.toDouble(),
                                 linea.text
                             )
                         )
@@ -189,6 +189,8 @@ class DatosCredencialActivity : AppCompatActivity() {
                     //"rotacion2: "+ rotacion2 + "\n\n" +
                     "rotacion: "+ rotacion
             )
+
+            rostroView.rotation = theta.toFloat()
         } else {
             val textoAnterior = datosTexto.text.toString()
             datosTexto.setText(textoAnterior + "\n\nNo se pudo calcular el origen")

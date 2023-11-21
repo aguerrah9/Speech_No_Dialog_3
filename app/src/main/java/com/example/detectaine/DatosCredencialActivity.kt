@@ -2,6 +2,9 @@ package com.example.detectaine
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.text.method.ScrollingMovementMethod
 import android.util.Log
@@ -9,6 +12,7 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.drawToBitmap
 import com.example.camerax_mlkit.FaceDrawable
 import com.example.camerax_mlkit.TextDrawable
 import com.google.mlkit.vision.common.InputImage
@@ -36,6 +40,7 @@ class DatosCredencialActivity : AppCompatActivity() {
     private val anguloMiIdeal = (anguloMiIdealRad * 180) / Math.PI
 
     private var textosyPosiciones = mutableListOf<TextoPosicion>()
+    private var anguloGeneralRotacion = 0.0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,7 +67,7 @@ class DatosCredencialActivity : AppCompatActivity() {
 
         // Haz lo que necesites con el Bitmap
         if (bitmap != null) {
-            rostroView.setImageBitmap(bitmap)
+            //rostroView.setImageBitmap(bitmap)
             reconoce()
         } else {
             datosTexto.setText("No se encontro la imagen")
@@ -74,6 +79,21 @@ class DatosCredencialActivity : AppCompatActivity() {
         datosTexto.setText("Cargando...")
         botonReconocer.isEnabled = false
         rostroView.overlay.clear()
+
+        //rostroView.setImageBitmap(null)
+        rostroView.setImageBitmap(bitmap)
+
+        // Obtener el Drawable desde el ImageView
+        val drawable: Drawable? = rostroView.drawable
+
+        // Verificar si el drawable es una instancia de BitmapDrawable
+        if (drawable is BitmapDrawable) {
+            // Obtener el Bitmap del BitmapDrawable
+            bitmap = drawable.bitmap
+
+            // Ahora tienes el Bitmap que representa el contenido del ImageView
+            // Haz lo que necesites con el bitmap
+        }
 
         val imagen = InputImage.fromBitmap(bitmap, 0)
         detectorRostro.process(imagen)
@@ -110,6 +130,7 @@ class DatosCredencialActivity : AppCompatActivity() {
                 botonReconocer.isEnabled = true
             }
 
+        textosyPosiciones.clear()
         detectorTexto.process(InputImage.fromBitmap(bitmap, 0))
             .addOnSuccessListener { labels ->
                 Log.v("Reconocedor textos", "labels: " + labels.text)
@@ -146,11 +167,11 @@ class DatosCredencialActivity : AppCompatActivity() {
         val labelNombre = textosyPosiciones.filter { it.texto == "NOMBRE" }
         val labelDomicilio = textosyPosiciones.filter { it.texto == "DOMICILIO" }
 
-        if (labelNombre.size > 0 && labelDomicilio.size > 0 &&
-                    labelINE.size > 0 && labelMexico.size > 0
+        if (labelNombre.isNotEmpty() && labelDomicilio.isNotEmpty()
+            //&& labelINE.size > 0 && labelMexico.size > 0
         ) {
 
-            val diffmix = labelINE[0].left - labelMexico[0].left
+            /*val diffmix = labelINE[0].left - labelMexico[0].left
             val diffmiy = labelINE[0].top - labelMexico[0].top
             val mi = atan( (diffmiy/diffmix) )
             val angmi = mi * 180 / Math.PI
@@ -159,13 +180,14 @@ class DatosCredencialActivity : AppCompatActivity() {
 
             if (anguloRotacion < 0) rotacion = "izquierda"
             else if (anguloRotacion > 0) rotacion = "derecha"
-            else rotacion = "sin rotacion"
+            else rotacion = "sin rotacion"*/
 
             val difLeft = labelDomicilio[0].left - labelNombre[0].left
             val difTop = labelDomicilio[0].top - labelNombre[0].top
 
             val rads = atan(difLeft/difTop)
             val theta = (rads * 180) / Math.PI
+            anguloGeneralRotacion = theta
 
             //if (theta < 0) theta = 180 - theta
             //val rotacion2 = 90 - theta
@@ -180,17 +202,27 @@ class DatosCredencialActivity : AppCompatActivity() {
 
             val textoAnterior = datosTexto.text.toString()
             datosTexto.setText( textoAnterior + "\n\n" +
-                    "pendiente mi Ideal: "+ (-2.toFloat() / 15).toString() + "\n\n"+
-                    "pendiente mi: "+ mi + "\n\n" +
-                    "anguloMiIdeal: " + anguloMiIdeal+ "\n\n" +
-                    "angulo obtenido: " + angmi+ "\n\n" +
-                    "anguloRotacion: "+anguloRotacion + "\n\n" +
-                    "angulo: "+ theta + "\n\n" +
+                    //"pendiente mi Ideal: "+ (-2.toFloat() / 15).toString() + "\n\n"+
+                    //"pendiente mi: "+ mi + "\n\n" +
+                    //"anguloMiIdeal: " + anguloMiIdeal+ "\n\n" +
+                    //"angulo obtenido: " + angmi+ "\n\n" +
+                    //"anguloRotacion: "+anguloRotacion + "\n\n" +
+                    "angulo: "+ theta + "\n\n"
                     //"rotacion2: "+ rotacion2 + "\n\n" +
-                    "rotacion: "+ rotacion
+                    //"rotacion: "+ rotacion
             )
 
-            rostroView.rotation = theta.toFloat()
+            if (anguloGeneralRotacion != 0.0) {
+                // Rotar el Bitmap
+                val matrix = Matrix()
+                matrix.postRotate(anguloGeneralRotacion.toFloat()) // Rotar 90 grados en sentido horario
+                val rotatedBitmap: Bitmap =
+                    Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+
+                //rostroView.setImageBitmap(rotatedBitmap)
+                bitmap = rotatedBitmap
+            }
+
         } else {
             val textoAnterior = datosTexto.text.toString()
             datosTexto.setText(textoAnterior + "\n\nNo se pudo calcular el origen")

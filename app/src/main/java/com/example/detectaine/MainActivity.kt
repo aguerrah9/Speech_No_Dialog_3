@@ -140,6 +140,7 @@ class MainActivity : AppCompatActivity() {
                     previewView.overlay.clear()
                     for (obj in objectResults) {
                         if ( obj.labels.size > 0 && obj.labels[0].text.contains("license")) {
+                            Log.v("objeto", obj.toString())
                             val objectDrawable = ObjectDetectedDrawable(obj)
                             previewView.overlay.add(objectDrawable)
 

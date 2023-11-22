@@ -1,8 +1,6 @@
 package com.example.detectaine
 
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Matrix
+import android.graphics.*
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.os.Bundle
@@ -12,7 +10,6 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.drawToBitmap
 import com.example.camerax_mlkit.FaceDrawable
 import com.example.camerax_mlkit.TextDrawable
 import com.google.mlkit.vision.common.InputImage
@@ -21,7 +18,6 @@ import com.google.mlkit.vision.face.FaceDetector
 import com.google.mlkit.vision.face.FaceDetectorOptions
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
-import kotlin.math.abs
 import kotlin.math.atan
 
 
@@ -131,7 +127,7 @@ class DatosCredencialActivity : AppCompatActivity() {
             }
 
         textosyPosiciones.clear()
-        detectorTexto.process(InputImage.fromBitmap(bitmap, 0))
+        detectorTexto.process(imagen)
             .addOnSuccessListener { labels ->
                 Log.v("Reconocedor textos", "labels: " + labels.text)
 
@@ -151,7 +147,8 @@ class DatosCredencialActivity : AppCompatActivity() {
                         )
                     }
                 }
-                datosTexto.setText(textosBox)
+                datosTexto.setText( "tamaño imagen: "+ bitmap.width +" "+bitmap.height+ "\n\n"
+                        + textosBox)
             }
             .addOnCompleteListener {
                 botonReconocer.isEnabled = true
@@ -165,7 +162,7 @@ class DatosCredencialActivity : AppCompatActivity() {
         val labelINE = textosyPosiciones.filter { it.texto == "INSTITUTO FEDERAL ELECTORAL" || it.texto == "INSTITUTO NACIONAL ELECTORAL" }
         val labelCredencial = textosyPosiciones.filter { it.texto == "CREDENCIAL PARA VOTAR" }
         val labelNombre = textosyPosiciones.filter { it.texto == "NOMBRE" }
-        val labelDomicilio = textosyPosiciones.filter { it.texto == "DOMICILIO" }
+        val labelDomicilio = textosyPosiciones.filter { it.texto == "FECHA DE NACIMIENTO" }
 
         if (labelNombre.isNotEmpty() && labelDomicilio.isNotEmpty()
             //&& labelINE.size > 0 && labelMexico.size > 0
@@ -216,8 +213,8 @@ class DatosCredencialActivity : AppCompatActivity() {
                 // Rotar el Bitmap
                 val matrix = Matrix()
                 matrix.postRotate(anguloGeneralRotacion.toFloat()) // Rotar 90 grados en sentido horario
-                val rotatedBitmap: Bitmap =
-                    Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+
+                val rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width/2, bitmap.height/2, matrix, true)
 
                 //rostroView.setImageBitmap(rotatedBitmap)
                 bitmap = rotatedBitmap

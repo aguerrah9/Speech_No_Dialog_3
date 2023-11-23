@@ -23,6 +23,7 @@ import com.example.camerax_mlkit.FaceDrawable
 import com.example.camerax_mlkit.TextDrawable
 import com.example.detectaine.databinding.ActivityMainBinding
 import com.example.detectaine.drawables.ObjectDetectedDrawable
+import com.example.detectaine.drawables.RecuadroDrawable
 import com.google.mlkit.common.model.LocalModel
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.FaceDetection
@@ -134,10 +135,18 @@ class MainActivity : AppCompatActivity() {
                 ) {
                     Log.v(TAG, "No hay objectos")
                     previewView.overlay.clear()
+
+                    val recuadro = RecuadroDrawable(previewView)
+                    previewView.overlay.add(recuadro)
+
                     previewView.setOnTouchListener { _, _ -> false } //no-op
                     return@MlKitAnalyzer
                 } else {
                     previewView.overlay.clear()
+
+                    val recuadro = RecuadroDrawable(previewView)
+                    previewView.overlay.add(recuadro)
+
                     for (obj in objectResults) {
                         if ( obj.labels.size > 0 && obj.labels[0].text.contains("license")) {
                             Log.v("objeto", obj.toString())

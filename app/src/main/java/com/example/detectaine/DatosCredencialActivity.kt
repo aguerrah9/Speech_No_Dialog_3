@@ -12,10 +12,15 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.example.camerax_mlkit.FaceDrawable
 import com.example.camerax_mlkit.TextDrawable
+import com.example.detectaine.drawables.CirculoDrawable
+import com.google.mlkit.common.model.LocalModel
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetector
 import com.google.mlkit.vision.face.FaceDetectorOptions
+import com.google.mlkit.vision.objects.ObjectDetection
+import com.google.mlkit.vision.objects.ObjectDetector
+import com.google.mlkit.vision.objects.custom.CustomObjectDetectorOptions
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlin.math.atan
@@ -27,6 +32,7 @@ class DatosCredencialActivity : AppCompatActivity() {
     private lateinit var datosTexto: TextView
     private lateinit var botonReconocer: Button
 
+    private lateinit var objectDetector: ObjectDetector
     private val detectorTexto = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
     private lateinit var detectorRostro : FaceDetector
 
@@ -54,6 +60,18 @@ class DatosCredencialActivity : AppCompatActivity() {
 
         // Cargar el Bitmap desde la memoria interna
         bitmap = rutaArchivo?.let { cargarBitmapDesdeArchivo(it) }!!
+
+        val localModel =
+            LocalModel.Builder().setAssetFilePath("custom_models/object_labeler.tflite").build()
+        // Live detection and tracking
+        val customObjectDetectorOptions =
+            CustomObjectDetectorOptions.Builder(localModel)
+                .setDetectorMode(CustomObjectDetectorOptions.SINGLE_IMAGE_MODE)
+                .enableClassification()
+                //.setClassificationConfidenceThreshold(0.5f)
+                //.setMaxPerObjectLabelCount(3)
+                .build()
+        objectDetector = ObjectDetection.getClient(customObjectDetectorOptions)
 
         // Real-time contour detection
         val realTimeOpts = FaceDetectorOptions.Builder()
@@ -136,8 +154,8 @@ class DatosCredencialActivity : AppCompatActivity() {
                     for (linea in textBlock.lines) {
                         val textDrawable = TextDrawable(linea)
                         rostroView.overlay.add(textDrawable)
-                        textosBox += (linea.boundingBox!!.left.toFloat() * 100 / bitmap.width).toString() + " " +
-                                (linea.boundingBox!!.top.toFloat() * 100 / bitmap.height).toString() + " " + linea.text + "\n"
+                        textosBox += (linea.boundingBox!!.left.toFloat()).toString() + " " +
+                                (linea.boundingBox!!.top.toFloat()).toString() + " " + linea.text + "\n"
                         textosyPosiciones.add(
                             TextoPosicion(
                                 linea.boundingBox!!.left.toDouble(),
@@ -199,31 +217,97 @@ class DatosCredencialActivity : AppCompatActivity() {
 
             val textoAnterior = datosTexto.text.toString()
             datosTexto.setText( textoAnterior + "\n\n" +
-                    //"pendiente mi Ideal: "+ (-2.toFloat() / 15).toString() + "\n\n"+
-                    //"pendiente mi: "+ mi + "\n\n" +
-                    //"anguloMiIdeal: " + anguloMiIdeal+ "\n\n" +
-                    //"angulo obtenido: " + angmi+ "\n\n" +
-                    //"anguloRotacion: "+anguloRotacion + "\n\n" +
                     "angulo: "+ theta + "\n\n"
-                    //"rotacion2: "+ rotacion2 + "\n\n" +
-                    //"rotacion: "+ rotacion
             )
 
-            if (anguloGeneralRotacion != 0.0) {
+            if (anguloGeneralRotacion >= 0.5 || anguloGeneralRotacion <= -0.5) {
                 // Rotar el Bitmap
                 val matrix = Matrix()
-                matrix.postRotate(anguloGeneralRotacion.toFloat()) // Rotar 90 grados en sentido horario
+                matrix.preRotate(anguloGeneralRotacion.toFloat()) // Rotar 90 grados en sentido horario
 
-                val rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width/2, bitmap.height/2, matrix, true)
+                val rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+                //val scaledBitmap = Bitmap.createScaledBitmap(rotatedBitmap,bitmap.width,bitmap.height, true)
+                val scaledBitmap = Bitmap.createBitmap(
+                    rotatedBitmap,
+                    rotatedBitmap.width/2 - bitmap.width/2,
+                    rotatedBitmap.height/2 - bitmap.height/2,
+                    bitmap.width,
+                    bitmap.height
+                )
 
                 //rostroView.setImageBitmap(rotatedBitmap)
-                bitmap = rotatedBitmap
+                bitmap = scaledBitmap
+                //reconoce()
+            } else {
+                muestraOrigen()
             }
 
         } else {
             val textoAnterior = datosTexto.text.toString()
-            datosTexto.setText(textoAnterior + "\n\nNo se pudo calcular el origen")
+            datosTexto.setText(textoAnterior + "\n\nNo se pudo calcular el angulo de rotacion")
         }
+    }
+
+    private fun muestraOrigen() {
+        val labelMexico = textosyPosiciones.filter { it.texto == "MÉXICO" }
+        val labelINE = textosyPosiciones.filter { it.texto == "INSTITUTO FEDERAL ELECTORAL" || it.texto == "INSTITUTO NACIONAL ELECTORAL" }
+        val labelCredencial = textosyPosiciones.filter { it.texto == "CREDENCIAL PARA VOTAR" }
+
+        if (labelMexico.isNotEmpty() && labelINE.isNotEmpty() ) {
+            val difx = labelINE[0].left - labelMexico[0].left // este debe ser proporcion 15
+            val dify = labelINE[0].top - labelMexico[0].top // este debe ser proporcion -2
+
+            val posOy = labelINE[0].top - dify*(8.toDouble()/-3)
+            val pos0x = labelINE[0].left - difx*(35.toDouble()/15)
+
+            val posOy2 = labelMexico[0].top - dify*(10.toDouble()/-3)
+            val pos0x2 = labelMexico[0].left - difx*(20.toDouble()/15)
+
+            val circuloOrigen = CirculoDrawable(pos0x,posOy)
+            rostroView.overlay.add(circuloOrigen)
+
+            val circuloOrigen2 = CirculoDrawable(pos0x,posOy)
+            rostroView.overlay.add(circuloOrigen2)
+
+            val esquina1 = CirculoDrawable(0.0,0.0)
+            rostroView.overlay.add(esquina1)
+            val esquina2 = CirculoDrawable(0.0,bitmap.height.toDouble())
+            rostroView.overlay.add(esquina2)
+            val esquina3 = CirculoDrawable(bitmap.width.toDouble(),0.0)
+            rostroView.overlay.add(esquina3)
+            val esquina4 = CirculoDrawable(bitmap.width.toDouble(), bitmap.height.toDouble())
+            rostroView.overlay.add(esquina4)
+
+            val textoAnterior = datosTexto.text.toString()
+            datosTexto.setText( textoAnterior + ""+ "\n\n"+
+                "INE: "+ labelINE[0].left.toString() + " " + labelINE[0].top.toString() + "\n\n"+
+                "Mexico: "+ labelMexico[0].left.toString() + " " + labelMexico[0].top.toString() + "\n\n"+
+                "difere: "+ difx.toString() + " " + dify.toString() + "\n\n"+
+                "origen: "+ pos0x.toString() + " " + posOy.toString() + "\n\n"+
+                "orige2: "+ pos0x2.toString() + " " + posOy2.toString() + "\n\n"
+            )
+        }
+    }
+    private fun identificaTextos() {
+        for (texto in textosyPosiciones) {
+            if (texto.texto == "DOMICILIO") {
+                var distancias = mutableListOf<TextoDistancia>()
+                for (otrotexto in textosyPosiciones) {
+                    val distancia = distancia(texto,otrotexto)
+                    distancias.add(TextoDistancia(distancia,otrotexto.texto))
+                }
+                distancias.sortBy { it.distancia }
+                datosTexto.setText(distancias.toString())
+            }
+        }
+    }
+
+    private fun distancia( texto1:TextoPosicion, texto2:TextoPosicion ) : Double {
+        val difx = texto1.left - texto2.left
+        val dify = texto1.top - texto2.top
+        val cuadrados = difx*difx + dify*dify
+        val dist = Math.sqrt(cuadrados)
+        return dist
     }
 
     private fun cargarBitmapDesdeArchivo(rutaArchivo: String): Bitmap? {
@@ -232,3 +316,4 @@ class DatosCredencialActivity : AppCompatActivity() {
 }
 
 data class TextoPosicion(val left: Double, val top: Double, val texto: String)
+data class TextoDistancia(val distancia: Double, val texto: String)

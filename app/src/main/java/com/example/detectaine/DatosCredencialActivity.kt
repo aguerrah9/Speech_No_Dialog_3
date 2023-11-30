@@ -13,6 +13,8 @@ import androidx.appcompat.app.AppCompatActivity
 import com.example.camerax_mlkit.FaceDrawable
 import com.example.camerax_mlkit.TextDrawable
 import com.example.detectaine.drawables.CirculoDrawable
+import com.example.detectaine.drawables.LineaDrawable
+import com.example.detectaine.drawables.RectDrawable
 import com.google.mlkit.common.model.LocalModel
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.FaceDetection
@@ -43,6 +45,11 @@ class DatosCredencialActivity : AppCompatActivity() {
 
     private var textosyPosiciones = mutableListOf<TextoPosicion>()
     private var anguloGeneralRotacion = 0.0
+
+    private var puntoOrigenX = -10.0
+    private var puntoOrigenY = -10.0
+    private var conversionX = 0.0
+    private var conversionY = 0.0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -180,7 +187,7 @@ class DatosCredencialActivity : AppCompatActivity() {
         val labelINE = textosyPosiciones.filter { it.texto == "INSTITUTO FEDERAL ELECTORAL" || it.texto == "INSTITUTO NACIONAL ELECTORAL" }
         val labelCredencial = textosyPosiciones.filter { it.texto == "CREDENCIAL PARA VOTAR" }
         val labelNombre = textosyPosiciones.filter { it.texto == "NOMBRE" }
-        val labelDomicilio = textosyPosiciones.filter { it.texto == "FECHA DE NACIMIENTO" }
+        val labelDomicilio = textosyPosiciones.filter { it.texto.contains("CURP") }
 
         if (labelNombre.isNotEmpty() && labelDomicilio.isNotEmpty()
             //&& labelINE.size > 0 && labelMexico.size > 0
@@ -257,16 +264,19 @@ class DatosCredencialActivity : AppCompatActivity() {
             val difx = labelINE[0].left - labelMexico[0].left // este debe ser proporcion 15
             val dify = labelINE[0].top - labelMexico[0].top // este debe ser proporcion -2
 
-            val posOy = labelINE[0].top - dify*(8.toDouble()/-3)
-            val pos0x = labelINE[0].left - difx*(35.toDouble()/15)
+            conversionX = difx/14.8
+            conversionY = dify/-3.6
 
-            val posOy2 = labelMexico[0].top - dify*(10.toDouble()/-3)
-            val pos0x2 = labelMexico[0].left - difx*(20.toDouble()/15)
+            val posOy = labelINE[0].top - 7.toDouble()*conversionY
+            val pos0x = labelINE[0].left - 35.toDouble()*conversionX
+
+            val posOy2 = labelMexico[0].top - 10.toDouble()*conversionY
+            val pos0x2 = labelMexico[0].left - 20.toDouble()*conversionX
 
             val circuloOrigen = CirculoDrawable(pos0x,posOy)
             rostroView.overlay.add(circuloOrigen)
 
-            val circuloOrigen2 = CirculoDrawable(pos0x,posOy)
+            val circuloOrigen2 = CirculoDrawable(pos0x2,posOy2)
             rostroView.overlay.add(circuloOrigen2)
 
             val esquina1 = CirculoDrawable(0.0,0.0)
@@ -286,8 +296,106 @@ class DatosCredencialActivity : AppCompatActivity() {
                 "origen: "+ pos0x.toString() + " " + posOy.toString() + "\n\n"+
                 "orige2: "+ pos0x2.toString() + " " + posOy2.toString() + "\n\n"
             )
+
+            //dibujaLinea(pos0x,posOy,labelMexico[0].left,labelMexico[0].top)
+
+            puntoOrigenX = (pos0x + pos0x2)/2
+            puntoOrigenY = (posOy + posOy2)/2
+
+            buscaDatos()
+
         }
     }
+
+    fun dibujaLinea( x1:Double, y1:Double, x2:Double, y2:Double ) {
+        val lineaDrawable = LineaDrawable(x1, y1, x2, y2)
+        rostroView.overlay.add(lineaDrawable)
+    }
+
+    private fun buscaDatos() {
+
+        // para mexico
+        val puntoMexicoX = puntoOrigenX + 20.toDouble()*conversionX
+        val puntoMexicoY = puntoOrigenY + 10.toDouble()*conversionY
+        dibujaLinea(puntoOrigenX,puntoOrigenY,puntoMexicoX,puntoMexicoY)
+
+        // para INE
+        val puntoINEx = puntoOrigenX + 35.toDouble()*conversionX
+        val puntoINEy = puntoOrigenY + 7.toDouble()*conversionY
+        dibujaLinea(puntoOrigenX,puntoOrigenY,puntoINEx,puntoINEy)
+
+        // para apellido paterno
+        val apPatx = puntoOrigenX + 33.toDouble()*conversionX
+        val apPaty = puntoOrigenY + 32.toDouble()*conversionY
+        dibujaLinea(puntoOrigenX,puntoOrigenY,apPatx,apPaty)
+
+        val calleX = puntoOrigenX + 33.toDouble()*conversionX
+        val calleY = puntoOrigenY + 52.toDouble()*conversionY
+        dibujaLinea(puntoOrigenX,puntoOrigenY,calleX,calleY)
+
+        val curpX = puntoOrigenX + 33.toDouble()*conversionX
+        val curpY = puntoOrigenY + 75.toDouble()*conversionY
+        dibujaLinea(puntoOrigenX,puntoOrigenY,curpX,curpY)
+
+        val finalX = puntoOrigenX + 100.toDouble()*conversionX
+        val finalY = puntoOrigenY + 100.toDouble()*conversionY
+        val rectCredencial = RectDrawable(puntoOrigenX,puntoOrigenY,finalX,finalY)
+        rostroView.overlay.add(rectCredencial)
+
+        val matrizGrises = convertirAGrises(bitmap)
+
+        val matrizFiltrada = filtroSobel(matrizGrises)
+
+        mostrarMatrizGrisesEnImageView(matrizFiltrada, rostroView)
+
+    }
+
+    fun filtroSobel(matrizGrises: Array<IntArray>): Array<IntArray> {
+        val width = matrizGrises[0].size
+        val height = matrizGrises.size
+
+        val matrizFiltrada = Array(height) { IntArray(width) }
+        val filtro: Array<Array<Int>> = arrayOf(
+            arrayOf(-1, -1, -1),
+            arrayOf(0, 0, 0),
+            arrayOf(1, 1, 1)
+        )
+
+        for (y in 1 until height-1) {
+            for (x in 1 until width-1) {
+
+                val producto = matrizGrises[y-1][x-1]*filtro[0][0] + matrizGrises[y-1][x]*filtro[0][1] + matrizGrises[y-1][x+1]*filtro[0][2]
+                + matrizGrises[y][x-1]*filtro[1][0] + matrizGrises[y][x]*filtro[1][1] + matrizGrises[y][x+1]*filtro[1][2]
+                + matrizGrises[y+1][x-1]*filtro[2][0] + matrizGrises[y+1][x]*filtro[2][1] + matrizGrises[y+1][x+1]*filtro[2][2]
+
+                val promedio = producto/9
+
+                matrizFiltrada[y][x] = if (promedio != 0) {
+                    255
+                } else {
+                    0
+                }
+            }
+        }
+        return matrizFiltrada
+    }
+
+    fun mostrarMatrizGrisesEnImageView(matrizGrises: Array<IntArray>, imageView: ImageView) {
+        val width = matrizGrises[0].size
+        val height = matrizGrises.size
+
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                val color = Color.rgb(matrizGrises[y][x], matrizGrises[y][x], matrizGrises[y][x])
+                bitmap.setPixel(x, y, color)
+            }
+        }
+
+        imageView.setImageBitmap(bitmap)
+    }
+
     private fun identificaTextos() {
         for (texto in textosyPosiciones) {
             if (texto.texto == "DOMICILIO") {
@@ -313,6 +421,30 @@ class DatosCredencialActivity : AppCompatActivity() {
     private fun cargarBitmapDesdeArchivo(rutaArchivo: String): Bitmap? {
         return BitmapFactory.decodeFile(rutaArchivo)
     }
+
+    fun convertirAGrises(bitmap: Bitmap): Array<IntArray> {
+        val width = bitmap.width
+        val height = bitmap.height
+        val matrizGrises = Array(height) { IntArray(width) }
+
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                val pixel = bitmap.getPixel(x, y)
+                val r = Color.red(pixel)
+                val g = Color.green(pixel)
+                val b = Color.blue(pixel)
+
+                // Conversión a escala de grises
+                val gris = (0.299 * r + 0.587 * g + 0.114 * b).toInt()
+                //val pixelGris = Color.rgb(gris, gris, gris)
+
+                //bitmap.setPixel(x, y, pixelGris)
+                matrizGrises[y][x] = gris
+            }
+        }
+        return matrizGrises
+    }
+
 }
 
 data class TextoPosicion(val left: Double, val top: Double, val texto: String)

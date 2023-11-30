@@ -12,6 +12,8 @@ import android.widget.Button
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
+import androidx.camera.core.Camera
+import androidx.camera.core.ImageCapture.*
 import androidx.camera.mlkit.vision.MlKitAnalyzer
 import androidx.camera.video.*
 import androidx.camera.view.CameraController.COORDINATE_SYSTEM_VIEW_REFERENCED
@@ -48,6 +50,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var viewBinding: ActivityMainBinding
     private lateinit var botonFoto: Button
+    private lateinit var botonFlash: Button
 
     private lateinit var cameraExecutor: ExecutorService
 
@@ -75,6 +78,8 @@ class MainActivity : AppCompatActivity() {
 
         botonFoto = findViewById(R.id.buttonTomarFoto)
         botonFoto.setOnClickListener { tomarFoto() }
+
+        botonFlash = findViewById(R.id.buttonFlash)
 
         val localModel =
             LocalModel.Builder().setAssetFilePath("custom_models/object_labeler.tflite").build()
@@ -123,6 +128,18 @@ class MainActivity : AppCompatActivity() {
                 COORDINATE_SYSTEM_VIEW_REFERENCED,
                 ContextCompat.getMainExecutor(this)
             ) { result: MlKitAnalyzer.Result? ->
+
+                botonFlash.setOnClickListener {
+                    val currentFlashMode = cameraController.cameraInfo?.torchState?.value
+                    if (currentFlashMode == null || currentFlashMode == 0) {
+                        cameraController.enableTorch(true)
+                        this.botonFlash.setText("Flash Off")
+                    } else {
+                        cameraController.enableTorch(false)
+                        this.botonFlash.setText("Flash On")
+                    }
+                }
+
 
                 val objectResults = result?.getValue(objectDetector)
 
@@ -244,6 +261,7 @@ class MainActivity : AppCompatActivity() {
 
         cameraController.bindToLifecycle(this)
         previewView.controller = cameraController
+
     }
 
     private fun guardarBitmapEnArchivoInterno(bitmap: Bitmap, nombreArchivo: String): String {

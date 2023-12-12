@@ -1,0 +1,22 @@
+{
+  "AB" : {
+    "INSTITUTO FEDERAL ELECTORAL": {"left": 23.0, "top": 6.0, "bottom": 11.0},
+    "NOMBRE": {"left": 3.0, "top": 28.8, "bottom": 31.0},
+    "Apellido Paterno": {"left": 3.0, "top": 32.0, "botom": 35.5},
+    "Apellido Materno": {"left": 3.0, "top": 37.0, "bottom": 40.5},
+    "Nombres": {"left": 3.0, "top": 42.0, "bottom": 46.0},
+    "DOMICILIO": {"left": 3.0, "top": 48.0, "bottom": 50.5},
+    "Calle": {"left": 3.0, "top": 52.0, "bottom": 55.5},
+    "Colonia": {"left": 3.0, "top": 57.0, "bottom": 61.0},
+    "Ciudad": {"left": 3.0, "top": 62.0, "bottom": 66.0},
+    "Folio": {"left": 3.0, "top": 67.5, "bottom": 71.5},
+    "Año de Registro": {"left": 30.0, "top": 67.0, "bottom": 70.5},
+    "Clave": {"left": 3.0, "top": 73.0, "bottom": 77.0},
+    "ESTADO": {"left": 3.0, "top": 79.0, "bottom": 83.0},
+    "MUNICIPIO": {"left": 3.0, "top": 84.5, "bottom": 88.0},
+    "LOCALIDAD": {"left": 20.5, "top": 84.5, "bottom": 88.0},
+    "SECCION": {"left": 39.5, "top": 84.5, "bottom": 88.0},
+    "EDAD": {"left": 53.0, "top": 32.0, "bottom": 36.0},
+    "SEXO": {"left": 53.0, "top": 37.0, "bottom": 40.5}
+  }
+}

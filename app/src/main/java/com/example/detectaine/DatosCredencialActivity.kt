@@ -25,7 +25,9 @@ import com.google.mlkit.vision.objects.ObjectDetector
 import com.google.mlkit.vision.objects.custom.CustomObjectDetectorOptions
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import java.lang.Math.abs
 import kotlin.math.atan
+import kotlin.math.roundToInt
 
 
 class DatosCredencialActivity : AppCompatActivity() {
@@ -46,10 +48,56 @@ class DatosCredencialActivity : AppCompatActivity() {
     private var textosyPosiciones = mutableListOf<TextoPosicion>()
     private var anguloGeneralRotacion = 0.0
 
+    private var tipoCredencial = ""
+
     private var puntoOrigenX = -10.0
     private var puntoOrigenY = -10.0
     private var conversionX = 0.0
     private var conversionY = 0.0
+
+    private var aPaternoX = 100.0
+    private var aPaternoY = 100.0
+    private var aMaternoX = 100.0
+    private var aMaternoY = 100.0
+    private var nombresX = 100.0
+    private var nombresY = 100.0
+    private var calleX = 100.0
+    private var calleY = 100.0
+    private var coloniaX = 100.0
+    private var coloniaY = 100.0
+    private var ciudadX = 100.0
+    private var ciudadY = 100.0
+    private var claveX = 100.0
+    private var claveY = 100.0
+    private var curpX = 100.0
+    private var curpY = 100.0
+    private var fNacimientoX = 100.0
+    private var fNacimientoY = 100.0
+    private var sexoX = 100.0
+    private var sexoY = 100.0
+    private var seccionX = 100.0
+    private var seccionY = 100.0
+    private var anioRegistroX = 100.0
+    private var anioRegistroY = 100.0
+    private var vigenciaX = 100.0
+    private var vigenciaY = 100.0
+
+    private var aPaterno = ""
+    private var aMaterno = ""
+    private var nombres = ""
+    private var calle = ""
+    private var colonia = ""
+    private var ciudad = ""
+    private var clave = ""
+    private var curp = ""
+    private var sexo = ""
+    private var fechaNacimiento = ""
+    private var seccion = ""
+    private var anioRegistro = ""
+    private var vigencia = ""
+
+    private val toleranciaX = 1.5
+    private val toleranciaY = 1.5
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -167,7 +215,8 @@ class DatosCredencialActivity : AppCompatActivity() {
                             TextoPosicion(
                                 linea.boundingBox!!.left.toDouble(),
                                 linea.boundingBox!!.top.toDouble(),
-                                linea.text
+                                linea.text,
+                                linea.boundingBox!!.bottom.toDouble()
                             )
                         )
                     }
@@ -177,8 +226,65 @@ class DatosCredencialActivity : AppCompatActivity() {
             }
             .addOnCompleteListener {
                 botonReconocer.isEnabled = true
-                calcularOrigen()
+                tipoCredencial()
             }
+    }
+
+    private fun tipoCredencial() {
+
+        val labelIFE = textosyPosiciones.filter { it.texto == "INSTITUTO FEDERAL ELECTORAL" }
+        val labelINE = textosyPosiciones.filter { it.texto == "INSTITUTO NACIONAL ELECTORAL" }
+        val labelCURP = textosyPosiciones.filter { it.texto.contains("CURP") }
+        val labelMexico = textosyPosiciones.filter { it.texto == "MÉXICO" }
+        val labelEstado = textosyPosiciones.filter { it.texto.contains("ESTADO") }
+        val labelAddress = textosyPosiciones.filter { it.texto.contains("ADDRESS") }
+        val labelVigencia = textosyPosiciones.filter { it.texto.contains("VIGENCIA") }
+
+        if (labelIFE.size > 0) {
+            // es de tipo A - D
+            if (labelCURP.isEmpty() && labelVigencia.isEmpty()) {
+                // es A o B
+                tipoCredencial = "AB"
+            } else {
+                // es C o D
+                if (labelMexico.isEmpty()) {
+                    // es C
+                    tipoCredencial = "C"
+                } else {
+                    // es D
+                    tipoCredencial = "D"
+                }
+            }
+        }
+        if (labelINE.size > 0) {
+            // es de tipo E - H
+            if (labelEstado.isNotEmpty()) {
+                // es E o F
+                if (labelAddress.isEmpty()) {
+                    // es E
+                    tipoCredencial = "E"
+                } else {
+                    // es F
+                    tipoCredencial = "F"
+                }
+            } else {
+                // es G o H
+                if (labelAddress.isEmpty()) {
+                    // es G
+                    tipoCredencial = "G"
+                } else {
+                    // es H
+                    tipoCredencial = "H"
+                }
+            }
+        }
+
+        if (tipoCredencial != "" ) {
+            datosTexto.setText("tipo Credencial: "+tipoCredencial)
+            calcularOrigen()
+        } else {
+            datosTexto.setText("No se pudo detectar el tipo de Credencial")
+        }
     }
 
     private fun calcularOrigen() {
@@ -187,7 +293,7 @@ class DatosCredencialActivity : AppCompatActivity() {
         val labelINE = textosyPosiciones.filter { it.texto == "INSTITUTO FEDERAL ELECTORAL" || it.texto == "INSTITUTO NACIONAL ELECTORAL" }
         val labelCredencial = textosyPosiciones.filter { it.texto == "CREDENCIAL PARA VOTAR" }
         val labelNombre = textosyPosiciones.filter { it.texto == "NOMBRE" }
-        val labelDomicilio = textosyPosiciones.filter { it.texto.contains("CURP") }
+        val labelDomicilio = textosyPosiciones.filter { it.texto.contains("CLAVE DE ELECTOR") }
 
         if (labelNombre.isNotEmpty() && labelDomicilio.isNotEmpty()
             //&& labelINE.size > 0 && labelMexico.size > 0
@@ -259,19 +365,23 @@ class DatosCredencialActivity : AppCompatActivity() {
         val labelMexico = textosyPosiciones.filter { it.texto == "MÉXICO" }
         val labelINE = textosyPosiciones.filter { it.texto == "INSTITUTO FEDERAL ELECTORAL" || it.texto == "INSTITUTO NACIONAL ELECTORAL" }
         val labelCredencial = textosyPosiciones.filter { it.texto == "CREDENCIAL PARA VOTAR" }
+        val labelNombre = textosyPosiciones.filter { it.texto == "NOMBRE" }
 
         if (labelMexico.isNotEmpty() && labelINE.isNotEmpty() ) {
             val difx = labelINE[0].left - labelMexico[0].left // este debe ser proporcion 15
             val dify = labelINE[0].top - labelMexico[0].top // este debe ser proporcion -2
 
-            conversionX = difx/14.8
-            conversionY = dify/-3.6
+            val difMNx = labelNombre[0].left - labelMexico[0].left // este debe ser proporcion 15
+            val difMNy = labelNombre[0].top - labelMexico[0].top // este debe ser proporcion -2
 
-            val posOy = labelINE[0].top - 7.toDouble()*conversionY
-            val pos0x = labelINE[0].left - 35.toDouble()*conversionX
+            conversionX = difMNx/12.5 //difx/14.8
+            conversionY = difMNy/22.0 //dify/-3.6
 
-            val posOy2 = labelMexico[0].top - 10.toDouble()*conversionY
-            val pos0x2 = labelMexico[0].left - 20.toDouble()*conversionX
+            val posOy = labelNombre[0].top - 32.0*conversionY
+            val pos0x = labelNombre[0].left - 33.0*conversionX
+
+            val posOy2 = labelMexico[0].top - 9.0*conversionY
+            val pos0x2 = labelMexico[0].left - 20.0*conversionX
 
             val circuloOrigen = CirculoDrawable(pos0x,posOy)
             rostroView.overlay.add(circuloOrigen)
@@ -304,6 +414,9 @@ class DatosCredencialActivity : AppCompatActivity() {
 
             buscaDatos()
 
+        } else {
+            val textoAnterior = datosTexto.text.toString()
+            datosTexto.setText(textoAnterior + "\n\nNo se pudo calcular el punto de origen")
         }
     }
 
@@ -315,37 +428,188 @@ class DatosCredencialActivity : AppCompatActivity() {
     private fun buscaDatos() {
 
         // para mexico
-        val puntoMexicoX = puntoOrigenX + 20.toDouble()*conversionX
-        val puntoMexicoY = puntoOrigenY + 10.toDouble()*conversionY
+        val puntoMexicoX = puntoOrigenX + 20.0*conversionX
+        val puntoMexicoY = puntoOrigenY + 9.0*conversionY
         dibujaLinea(puntoOrigenX,puntoOrigenY,puntoMexicoX,puntoMexicoY)
 
         // para INE
-        val puntoINEx = puntoOrigenX + 35.toDouble()*conversionX
-        val puntoINEy = puntoOrigenY + 7.toDouble()*conversionY
+        val puntoINEx = puntoOrigenX + 35.0*conversionX
+        val puntoINEy = puntoOrigenY + 7.0*conversionY
         dibujaLinea(puntoOrigenX,puntoOrigenY,puntoINEx,puntoINEy)
 
         // para apellido paterno
-        val apPatx = puntoOrigenX + 33.toDouble()*conversionX
-        val apPaty = puntoOrigenY + 32.toDouble()*conversionY
-        dibujaLinea(puntoOrigenX,puntoOrigenY,apPatx,apPaty)
+        aPaternoX = puntoOrigenX + 33.0*conversionX
+        aPaternoY = puntoOrigenY + 36.0*conversionY
+        dibujaLinea(puntoOrigenX,puntoOrigenY,aPaternoX,aPaternoY)
 
-        val calleX = puntoOrigenX + 33.toDouble()*conversionX
-        val calleY = puntoOrigenY + 52.toDouble()*conversionY
+        aMaternoX = puntoOrigenX + 33.0*conversionX
+        aMaternoY = puntoOrigenY + 40.0*conversionY
+
+        nombresX = puntoOrigenX + 33.0*conversionX
+        nombresY = puntoOrigenY + 44.0*conversionY
+
+        calleX = puntoOrigenX + 33.0*conversionX
+        calleY = puntoOrigenY + 59.0*conversionY
         dibujaLinea(puntoOrigenX,puntoOrigenY,calleX,calleY)
 
-        val curpX = puntoOrigenX + 33.toDouble()*conversionX
-        val curpY = puntoOrigenY + 75.toDouble()*conversionY
+        coloniaX = puntoOrigenX + 33.0*conversionX
+        coloniaY = puntoOrigenY + 63.0*conversionY
+
+        ciudadX = puntoOrigenX + 33.0*conversionX
+        ciudadY = puntoOrigenY + 67.0*conversionY
+
+        claveX = puntoOrigenX + 33.0*conversionX
+        claveY = puntoOrigenY + 74.0*conversionY
+
+        curpX = puntoOrigenX + 33.0*conversionX
+        curpY = puntoOrigenY + 83.0*conversionY
         dibujaLinea(puntoOrigenX,puntoOrigenY,curpX,curpY)
 
-        val finalX = puntoOrigenX + 100.toDouble()*conversionX
-        val finalY = puntoOrigenY + 100.toDouble()*conversionY
+        sexoX = puntoOrigenX + 86.5*conversionX
+        sexoY = puntoOrigenY + 32.0*conversionY
+        dibujaLinea(puntoOrigenX,puntoOrigenY,sexoX,sexoY)
+
+        fNacimientoX = puntoOrigenX + 33.0*conversionX
+        fNacimientoY = puntoOrigenY + 92.0*conversionY
+        dibujaLinea(puntoOrigenX,puntoOrigenY,fNacimientoX,fNacimientoY)
+
+        seccionX = puntoOrigenX + 58.0*conversionX
+        seccionY = puntoOrigenY + 92.0*conversionY
+        dibujaLinea(puntoOrigenX,puntoOrigenY,seccionX,seccionY)
+
+        anioRegistroX = puntoOrigenX + 69.0*conversionX
+        anioRegistroY = puntoOrigenY + 83.0*conversionY
+        dibujaLinea(puntoOrigenX,puntoOrigenY,anioRegistroX,anioRegistroY)
+
+        vigenciaX = puntoOrigenX + 70.0*conversionX
+        vigenciaY = puntoOrigenY + 92.0*conversionY
+        dibujaLinea(puntoOrigenX,puntoOrigenY,vigenciaX,vigenciaY)
+
+        val finalX = puntoOrigenX + 100.0*conversionX
+        val finalY = puntoOrigenY + 100.0*conversionY
         val rectCredencial = RectDrawable(puntoOrigenX,puntoOrigenY,finalX,finalY)
         rostroView.overlay.add(rectCredencial)
 
+        identificaTextos()
+
+    }
+
+    private fun identificaTextos() {
+
+        datosTexto.scrollY = 0
+        datosTexto.setText("Identificando...")
+
+        for (texto in textosyPosiciones) {
+            val aPatDistX = (texto.left - aPaternoX) / conversionX
+            if (abs(aPatDistX) <= toleranciaX) {
+                val aPatDistY = (texto.top - aPaternoY) / conversionY
+                if (abs(aPatDistY) <= toleranciaY) {
+                    aPaterno = texto.texto //+ " "+aPatDistX.dosDecimales()+" "+aPatDistY.dosDecimales()
+                }
+            }
+            val aMatDistX = (texto.left - aMaternoX) / conversionX
+            if (abs(aMatDistX) <= toleranciaX) {
+                val aMatDistY = (texto.top - aMaternoY) / conversionY
+                if (abs(aMatDistY) <= toleranciaY) {
+                    aMaterno = texto.texto //+ " "+aMatDistX.dosDecimales()+" "+aMatDistY.dosDecimales()
+                }
+            }
+            val nombresDistX = (texto.left - nombresX) / conversionX
+            if (abs(nombresDistX) <= toleranciaX) {
+                val nombresDistY = (texto.top - nombresY) / conversionY
+                if (abs(nombresDistY) <= toleranciaY) {
+                    nombres = texto.texto //+ " "+nombresDistX.dosDecimales()+" "+nombresDistY.dosDecimales()
+                }
+            }
+            val calleDistX = (texto.left - calleX) / conversionX
+            if (abs(calleDistX) <= toleranciaX) {
+                val calleDistY = (texto.top - calleY) / conversionY
+                if (abs(calleDistY) <= toleranciaY) {
+                    calle = texto.texto //+ " "+calleDistX.dosDecimales()+" "+calleDistY.dosDecimales()
+                }
+            }
+            val coloniaDistX = (texto.left - coloniaX) / conversionX
+            if (abs(coloniaDistX) <= toleranciaX) {
+                val coloniaDistY = (texto.top - coloniaY) / conversionY
+                if (abs(coloniaDistY) <= toleranciaY) {
+                    colonia = texto.texto //+ " "+coloniaDistX.dosDecimales()+" "+coloniaDistY.dosDecimales()
+                }
+            }
+            val ciudadDistX = (texto.left - ciudadX) / conversionX
+            if (abs(ciudadDistX) <= toleranciaX) {
+                val ciudadDistY = (texto.top - ciudadY) / conversionY
+                if (abs(ciudadDistY) <= toleranciaY) {
+                    ciudad = texto.texto //+ " "+ciudadDistX.dosDecimales()+" "+ciudadDistY.dosDecimales()
+                }
+            }
+            val claveDistX = (texto.left - claveX) / conversionX
+            if (abs(claveDistX) <= toleranciaX) {
+                val claveDistY = (texto.top - claveY) / conversionY
+                if (abs(claveDistY) <= toleranciaY) {
+                    clave = texto.texto //+ " "+claveDistX.dosDecimales()+" "+claveDistY.dosDecimales()
+                }
+            }
+            val curpDistX = (texto.left - curpX) / conversionX
+            if (abs(curpDistX) <= toleranciaX) {
+                val curpDistY = (texto.top - curpY) / conversionY
+                if (abs(curpDistY) <= toleranciaY) {
+                    curp = texto.texto //+ " "+curpDistX.dosDecimales()+" "+curpDistY.dosDecimales()
+                }
+            }
+            val sexoDistX = (texto.left - sexoX) / conversionX
+            if (abs(sexoDistX) <= toleranciaX) {
+                val sexoDistY = (texto.top - sexoY) / conversionY
+                if (abs(sexoDistY) <= toleranciaY) {
+                    sexo = texto.texto //+ " "+sexoDistX.dosDecimales()+" "+sexoDistY.dosDecimales()
+                }
+            }
+            val fnacDistX = (texto.left - fNacimientoX) / conversionX
+            if (abs(fnacDistX) <= toleranciaX) {
+                val fnacDistY = (texto.top - fNacimientoY) / conversionY
+                if (abs(fnacDistY) <= toleranciaY) {
+                    fechaNacimiento = texto.texto //+ " "+fnacDistX.dosDecimales()+" "+fnacDistY.dosDecimales()
+                }
+            }
+            val seccionDistX = (texto.left - seccionX) / conversionX
+            if (abs(seccionDistX) <= toleranciaX) {
+                val seccionDistY = (texto.top - seccionY) / conversionY
+                if (abs(seccionDistY) <= toleranciaY) {
+                    seccion = texto.texto //+ " "+seccionDistX.dosDecimales()+" "+seccionDistY.dosDecimales()
+                }
+            }
+            val anioRegDistX = (texto.left - anioRegistroX) / conversionX
+            if (abs(anioRegDistX) <= toleranciaX) {
+                val anioRegDistY = (texto.top - anioRegistroY) / conversionY
+                if (abs(anioRegDistY) <= toleranciaY) {
+                    anioRegistro = texto.texto //+ " "+anioRegDistX.dosDecimales()+" "+anioRegDistY.dosDecimales()
+                }
+            }
+            val vigenciaDistX = (texto.left - vigenciaX) / conversionX
+            if (abs(vigenciaDistX) <= toleranciaX) {
+                val vigenciaDistY = (texto.top - vigenciaY) / conversionY
+                if (abs(vigenciaDistY) <= toleranciaY) {
+                    vigencia = texto.texto //+ " "+vigenciaDistX.dosDecimales()+" "+vigenciaDistY.dosDecimales()
+                }
+            }
+        }
+
+        datosTexto.setText("Apellido Paterno: "+aPaterno+"\n"+
+                "Apellido Materno: "+aMaterno+"\n"+
+                "Nombre(s): "+nombres+"\n"+
+                "Dirección: "+calle+"\n"+
+                "Colonia: "+colonia+"\n"+
+                "Ciudad: "+ciudad+"\n"+
+                "Clave Elector: "+clave+"\n"+
+                "CURP: "+curp+"\n"+
+                "Sexo: "+sexo+"\n"+
+                "Fecha de Nacimiento: "+fechaNacimiento+"\n"+
+                "Sección: "+seccion+"\n"+
+                "Año de Registro: "+anioRegistro+"\n"+
+                "Vigencia: "+vigencia+"\n"
+        )
+
         val matrizGrises = convertirAGrises(bitmap)
-
         val matrizFiltrada = filtroSobel(matrizGrises)
-
         mostrarMatrizGrisesEnImageView(matrizFiltrada, rostroView)
 
     }
@@ -356,27 +620,87 @@ class DatosCredencialActivity : AppCompatActivity() {
 
         val matrizFiltrada = Array(height) { IntArray(width) }
         val filtro: Array<Array<Int>> = arrayOf(
-            arrayOf(-1, -1, -1),
-            arrayOf(0, 0, 0),
-            arrayOf(1, 1, 1)
+            arrayOf(-1, 0, 1),
+            arrayOf(-1, 0, 1),
+            arrayOf(-1, 0, 1)
+        )
+        val filtro2: Array<Array<Int>> = arrayOf(
+            arrayOf( 1, 0,-1),
+            arrayOf( 1, 0,-1),
+            arrayOf( 1, 0,-1)
+        )
+        val filtro3: Array<Array<Int>> = arrayOf(
+            arrayOf(-1,-1,-1),
+            arrayOf( 0, 0, 0),
+            arrayOf( 1, 1, 1)
+        )
+        val filtro4: Array<Array<Int>> = arrayOf(
+            arrayOf( 1, 2, 1),
+            arrayOf( 0, 0, 0),
+            arrayOf(-1,-2,-1)
+        )
+        val filtro5: Array<Array<Int>> = arrayOf(
+            arrayOf(-1, 0,-1),
+            arrayOf( 0, 4, 0),
+            arrayOf(-1, 0,-1)
         )
 
+        var maximo = 0
+        var minimo = 0
+        var maxMat = 0
+        var minMat = 0
         for (y in 1 until height-1) {
             for (x in 1 until width-1) {
 
-                val producto = matrizGrises[y-1][x-1]*filtro[0][0] + matrizGrises[y-1][x]*filtro[0][1] + matrizGrises[y-1][x+1]*filtro[0][2]
-                + matrizGrises[y][x-1]*filtro[1][0] + matrizGrises[y][x]*filtro[1][1] + matrizGrises[y][x+1]*filtro[1][2]
-                + matrizGrises[y+1][x-1]*filtro[2][0] + matrizGrises[y+1][x]*filtro[2][1] + matrizGrises[y+1][x+1]*filtro[2][2]
+                if (matrizGrises[y][x] > maxMat) maxMat = matrizGrises[y][x]
+                if (matrizGrises[y][x] < minMat) minMat = matrizGrises[y][x]
+
+                val producto =
+                    matrizGrises[y-1][x-1]*filtro[0][0] + matrizGrises[y-1][x]*filtro[0][1] + matrizGrises[y-1][x+1]*filtro[0][2]
+                +   matrizGrises[y][x-1]*filtro[1][0] + matrizGrises[y][x]*filtro[1][1] + matrizGrises[y][x+1]*filtro[1][2]
+                +   matrizGrises[y+1][x-1]*filtro[2][0] + matrizGrises[y+1][x]*filtro[2][1] + matrizGrises[y+1][x+1]*filtro[2][2]
+                val producto2 =
+                    matrizGrises[y-1][x-1]*filtro2[0][0] + matrizGrises[y-1][x]*filtro2[0][1] + matrizGrises[y-1][x+1]*filtro2[0][2]
+                +   matrizGrises[y][x-1]*filtro2[1][0] + matrizGrises[y][x]*filtro2[1][1] + matrizGrises[y][x+1]*filtro2[1][2]
+                +   matrizGrises[y+1][x-1]*filtro2[2][0] + matrizGrises[y+1][x]*filtro2[2][1] + matrizGrises[y+1][x+1]*filtro2[2][2]
+                val producto3 =
+                    matrizGrises[y-1][x-1]*filtro3[0][0] + matrizGrises[y-1][x]*filtro3[0][1] + matrizGrises[y-1][x+1]*filtro3[0][2]
+                +   matrizGrises[y][x-1]*filtro3[1][0] + matrizGrises[y][x]*filtro3[1][1] + matrizGrises[y][x+1]*filtro3[1][2]
+                +   matrizGrises[y+1][x-1]*filtro3[2][0] + matrizGrises[y+1][x]*filtro3[2][1] + matrizGrises[y+1][x+1]*filtro3[2][2]
+                val producto4 =
+                    matrizGrises[y-1][x-1]*filtro4[0][0] + matrizGrises[y-1][x]*filtro4[0][1] + matrizGrises[y-1][x+1]*filtro4[0][2]
+                +   matrizGrises[y][x-1]*filtro4[1][0] + matrizGrises[y][x]*filtro4[1][1] + matrizGrises[y][x+1]*filtro4[1][2]
+                +   matrizGrises[y+1][x-1]*filtro4[2][0] + matrizGrises[y+1][x]*filtro4[2][1] + matrizGrises[y+1][x+1]*filtro4[2][2]
+                val producto5 =
+                    matrizGrises[y-1][x-1]*filtro5[0][0] + matrizGrises[y-1][x]*filtro5[0][1] + matrizGrises[y-1][x+1]*filtro5[0][2]
+                +   matrizGrises[y][x-1]*filtro5[1][0] + matrizGrises[y][x]*filtro5[1][1] + matrizGrises[y][x+1]*filtro5[1][2]
+                +   matrizGrises[y+1][x-1]*filtro5[2][0] + matrizGrises[y+1][x]*filtro5[2][1] + matrizGrises[y+1][x+1]*filtro5[2][2]
 
                 val promedio = producto/9
+                val promedio2 = producto2/9
+                val promedio3 = producto3/9
+                val promedio4 = producto4/9
+                val promedio5 = producto4/9
 
-                matrizFiltrada[y][x] = if (promedio != 0) {
+                val verticales = (promedio + promedio2)/2
+
+                val final = abs(promedio4)
+
+                if (final > maximo) maximo = final
+                if (final < minimo) minimo = final
+                val thresh = (minimo + maximo) / 2
+
+                matrizFiltrada[y][x] = final/*if ( final > thresh ) {
                     255
                 } else {
                     0
-                }
+                }*/
             }
         }
+        Log.v("maximo Matriz: ",maxMat.toString())
+        Log.v("minimo Matriz: ",minMat.toString())
+        Log.v("maximo: ",maximo.toString())
+        Log.v("minimo: ",minimo.toString())
         return matrizFiltrada
     }
 
@@ -394,20 +718,6 @@ class DatosCredencialActivity : AppCompatActivity() {
         }
 
         imageView.setImageBitmap(bitmap)
-    }
-
-    private fun identificaTextos() {
-        for (texto in textosyPosiciones) {
-            if (texto.texto == "DOMICILIO") {
-                var distancias = mutableListOf<TextoDistancia>()
-                for (otrotexto in textosyPosiciones) {
-                    val distancia = distancia(texto,otrotexto)
-                    distancias.add(TextoDistancia(distancia,otrotexto.texto))
-                }
-                distancias.sortBy { it.distancia }
-                datosTexto.setText(distancias.toString())
-            }
-        }
     }
 
     private fun distancia( texto1:TextoPosicion, texto2:TextoPosicion ) : Double {
@@ -445,7 +755,11 @@ class DatosCredencialActivity : AppCompatActivity() {
         return matrizGrises
     }
 
+    private fun Double.dosDecimales(): Double {
+        val res = (this * 100.0).roundToInt() / 100.0
+        return res
+    }
 }
 
-data class TextoPosicion(val left: Double, val top: Double, val texto: String)
+data class TextoPosicion(val left: Double, val top: Double, val texto: String, val bottom: Double)
 data class TextoDistancia(val distancia: Double, val texto: String)
